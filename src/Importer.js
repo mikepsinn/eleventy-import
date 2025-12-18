@@ -426,15 +426,16 @@ class Importer {
 		let pathname = path.join(".", ...subdirs, path.normalize(fallbackPath));
 		let extension = contentType === "markdown" ? ".md" : ".html";
 
-		if(pathname.endsWith("/")) {
+		// Check for trailing path separator (cross-platform: / or \)
+		if(pathname.endsWith("/") || pathname.endsWith(path.sep)) {
 			if(this.isAssetsColocated()) {
-				return `${pathname}index${extension}`;
+				return path.join(pathname, `index${extension}`);
 			}
 			return `${pathname.slice(0, -1)}${extension}`;
 		}
 
 		if(this.isAssetsColocated()) {
-			return `${pathname}/index${extension}`;
+			return path.join(pathname, `index${extension}`);
 		}
 		return `${pathname}${extension}`;
 	}
