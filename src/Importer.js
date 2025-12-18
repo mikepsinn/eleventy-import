@@ -583,6 +583,59 @@ ${entry.content}`;
 
 		Logger.log(content.join(" "));
 	}
+
+	generateScaffolding() {
+		if(this.dryRun) {
+			return;
+		}
+
+		const packageJsonPath = path.join(".", "package.json");
+		const eleventyConfigPath = path.join(".", ".eleventy.js");
+
+		// Generate package.json if it doesn't exist
+		if(!fs.existsSync(packageJsonPath)) {
+			const packageJson = {
+				name: path.basename(process.cwd()),
+				version: "1.0.0",
+				description: "Eleventy site",
+				scripts: {
+					start: "eleventy --serve",
+					build: "eleventy",
+					clean: "rm -rf _site"
+				},
+				devDependencies: {
+					"@11ty/eleventy": "^3.0.0"
+				}
+			};
+
+			fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n", { encoding: "utf8" });
+			if(this.isVerbose) {
+				Logger.log(kleur.green(`Created ${packageJsonPath}`));
+			}
+		}
+
+		// Generate .eleventy.js if it doesn't exist
+		if(!fs.existsSync(eleventyConfigPath)) {
+			const eleventyConfig = `module.exports = function(eleventyConfig) {
+  // Copy assets to output
+  eleventyConfig.addPassthroughCopy("${this.#outputFolder}/assets");
+  eleventyConfig.addPassthroughCopy("${this.#outputFolder}/**/assets");
+
+  return {
+    dir: {
+      input: "${this.#outputFolder}",
+      output: "_site"
+    }
+  };
+};
+`;
+
+			fs.writeFileSync(eleventyConfigPath, eleventyConfig, { encoding: "utf8" });
+			if(this.isVerbose) {
+				Logger.log(kleur.green(`Created ${eleventyConfigPath}`));
+			}
+		}
+	}
 }
 
 export { Importer };
