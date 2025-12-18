@@ -302,6 +302,36 @@ class Importer {
 		return content;
 	}
 
+	async processMarkdownAudioLinks(content, entry) {
+		if(!content || !this.shouldDownloadAssets()) {
+			return content;
+		}
+
+		// Match markdown links to audio files: [text](url.mp3) or [text](url.mp3 "title")
+		// Captures: [1] = link text, [2] = URL only, [3] = file extension, [4] = optional title with quotes
+		const audioLinkPattern = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+\.(mp3|m4a|ogg|wav|flac)(?:\?[^\s\)"]*)?)\s*("[^"]*")?\)/gi;
+
+		const matches = [...content.matchAll(audioLinkPattern)];
+
+		for(const match of matches) {
+			const [fullMatch, linkText, audioUrl, , title] = match;
+			try {
+				const localUrl = await this.fetcher.fetchAsset(audioUrl, entry);
+				// Replace the URL in the markdown link with the local path, preserving title if present
+				const replacement = title
+					? `[${linkText}](${localUrl} ${title})`
+					: `[${linkText}](${localUrl})`;
+				content = content.replace(fullMatch, replacement);
+			} catch(error) {
+				// If download fails, keep the original URL
+				if(this.isVerbose) {
+					console.error(`Failed to download audio: ${audioUrl}`, error.message);
+				}
+			}
+		}
+
+		return content;
+	}
 
 	// Is used to filter getEntries and in toFiles (which also checks conflicts)
 	shouldSkipEntry(entry) {
@@ -356,6 +386,9 @@ class Importer {
 			await this.fetchRelatedMedia(entry);
 
 			entry.content = await this.getTransformedContent(entry, isWritingToMarkdown);
+
+			// Process markdown links to audio files (podcast MP3s, etc.)
+			entry.content = await this.processMarkdownAudioLinks(entry.content, entry);
 
 			if(isWritingToMarkdown && Importer.shouldConvertToMarkdown(entry)) {
 				entry.contentType = "markdown";
