@@ -473,9 +473,20 @@ class Importer {
 		return `${pathname}${extension}`;
 	}
 
+	static decodeHtmlEntities(str) {
+		if (!str) return str;
+		const entities = {
+			'&#8217;': "'", '&#8216;': "'", '&#8220;': '"', '&#8221;': '"',
+			'&#8230;': '...', '&#x2122;': '™', '&#038;': '&', '&amp;': '&',
+			'&#8211;': '–', '&#8212;': '—', '&quot;': '"', '&#039;': "'",
+			'&lt;': '<', '&gt;': '>'
+		};
+		return str.replace(/&#?[\w\d]+;/g, match => entities[match] || match);
+	}
+
 	static convertEntryToYaml(entry) {
 		let data = {};
-		data.title = entry.title;
+		data.title = Importer.decodeHtmlEntities(entry.title);
 		data.authors = entry.authors;
 		data.date = entry.date;
 		data.metadata = entry.metadata || {};
